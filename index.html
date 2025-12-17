@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>智能提货单修改 (最终固化版)</title>
+    <title>提货单修改器 (最终完美版)</title>
     
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.js"></script>
@@ -17,21 +17,30 @@
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
         h2 { margin-top: 0; color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; display: inline-block; }
         
-        .tip-box { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 12px; margin-bottom: 20px; color: #2e7d32; font-size: 13px; }
+        /* 你的专属提示框样式 */
+        .tip-box { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 12px; margin-bottom: 20px; color: #2e7d32; font-size: 13px; line-height: 1.6; }
+        
+        .mode-switch { display: flex; background: #e9ecef; border-radius: 8px; padding: 4px; margin-bottom: 20px; }
+        .mode-option { flex: 1; text-align: center; padding: 10px; cursor: pointer; border-radius: 6px; font-weight: bold; color: #666; transition: 0.3s; }
+        .mode-option.active { background: white; color: #007bff; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        .upload-area { margin-bottom: 20px; padding: 15px; border: 2px dashed #ddd; border-radius: 8px; background: #fafafa; display: none; }
+        .upload-area.show { display: block; animation: fadeIn 0.3s; }
         
         .field-row { background: #fafafa; border: 1px solid #eee; padding: 10px; margin-bottom: 12px; border-radius: 6px; }
         .main-inputs { display: flex; gap: 10px; margin-bottom: 8px; }
         .col { flex: 1; }
         
-        .tweak-row { display: flex; gap: 8px; align-items: center; border-top: 1px dashed #ddd; padding-top: 8px; }
-        .tweak-item { display: flex; align-items: center; font-size: 12px; color: #666; background: #fff; padding: 2px 6px; border-radius: 4px; border: 1px solid #ddd;}
-        .tweak-item label { margin-right: 4px; font-weight: normal; margin-bottom: 0; }
-        .tweak-item input { width: 40px; padding: 2px; text-align: center; border: none; border-bottom: 1px solid #ccc; font-weight: bold; color: #333;}
+        /* 微调行：默认可见，方便修改 */
+        .tweak-row { display: flex; gap: 5px; align-items: center; border-top: 1px dashed #ddd; padding-top: 8px; flex-wrap: wrap; }
+        .tweak-item { display: flex; align-items: center; font-size: 11px; color: #666; background: #fff; padding: 2px 4px; border-radius: 4px; border: 1px solid #ddd;}
+        .tweak-item label { margin-right: 2px; font-weight: normal; margin-bottom: 0; white-space: nowrap; }
+        .tweak-item input { width: 35px; padding: 2px; text-align: center; border: none; border-bottom: 1px solid #ccc; font-weight: bold; color: #333; font-size: 11px;}
         
         label { display: block; font-weight: bold; font-size: 13px; color: #333; margin-bottom: 4px; }
         input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; }
-        input:focus { border-color: #007bff; outline: none; }
         
+        /* 查找框高亮 */
         .input-find { background-color: #fffde7; border-color: #fbc02d; }
         
         button { width: 100%; padding: 14px; background: #007bff; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; }
@@ -39,21 +48,32 @@
         
         .debug-mode { background: #fff3cd; padding: 10px; border: 1px solid #ffeeba; border-radius: 4px; margin-bottom: 15px; font-size: 14px; display: flex; align-items: center; }
         .status { margin-top: 15px; padding: 10px; border-radius: 6px; font-size: 13px; min-height: 20px; font-family: monospace; white-space: pre-wrap; background: #eee; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>🚀 智能提货单修改 (参数固化版)</h2>
+    <h2>🚀 提货单修改器 (双模式)</h2>
     
     <div class="tip-box">
-        <b>已加载最终参数：</b> 系统已自动应用您调试好的“黄金参数”。<br>
-        旧文字关键词已精简（如只搜“四川省”），以提高识别率。
+        1. <b>参数基本已调整好。</b> x偏移代表左右，y偏移代表上下，框高度代表文字高度，宽度扩展代表框在文字后扩展多少<br>
+        2. 原理其实就是，先根据关键词搜索到文字，然后根据偏移量调整位置，使用一个白框覆盖，最后替换文字。<br>
+        3. 可以使用模糊搜索，例如，搜索“四川省”，可以直接写四进行搜索，但是注意不要重复。<br>
+        4. 默认模板是你发我的pdf版本，如果上传新文件，可能需要微调参数。<br>
+        5. <b>使用技巧：</b> 查找文字越短越好（如搜“2025”而不是“2025.12.17”），识别率更高。<br>
+    </div>
+    
+    <div class="mode-switch">
+        <div class="mode-option active" onclick="switchMode('template')" id="btnTemplate">使用默认模板</div>
+        <div class="mode-option" onclick="switchMode('upload')" id="btnUpload">上传新文件</div>
     </div>
 
-    <div style="margin-bottom: 15px;">
-        <label>1. 上传 PDF 文件</label>
+    <div id="uploadContainer" class="upload-area">
+        <label>📂 请选择 PDF 文件：</label>
         <input type="file" id="uploadPdf" accept="application/pdf" style="width:100%">
+        <div style="font-size:12px; color:#666; margin-top:5px;">注意：如果上传的是新格式，下方参数可能需要微调。</div>
     </div>
 
     <div class="debug-mode">
@@ -61,45 +81,55 @@
             <input type="checkbox" id="debugMode"> 
             <span style="margin-left:8px; color:#856404; font-weight:bold;">开启红色框调试</span>
         </label>
-        <span style="margin-left:15px; font-size:12px; color:#666;">如果发现位置偏移，请勾选此项检查。</span>
+        <span style="margin-left:15px; font-size:12px; color:#666;">检查位置偏移</span>
     </div>
 
     <div id="fieldsContainer"></div>
 
-    <button id="runBtn" onclick="startProcess()">🚀 开始识别并生成</button>
+    <button id="runBtn" onclick="startProcess()">🚀 开始生成</button>
     <div id="statusBox" class="status">准备就绪。</div>
 </div>
 
 <script>
     const { PDFDocument, rgb } = PDFLib;
+    let currentMode = 'template'; 
 
-    // === 🏆 最终固化参数 (源自您的截图) ===
-    // 1. findText: 改成了更短的关键词，识别更准
-    // 2. offX/offY: 写入了您调试好的 -3/-6/-8 等数值
-    // 3. widthEx: 写入了您调整好的宽度
+    function switchMode(mode) {
+        currentMode = mode;
+        const uploadDiv = document.getElementById('uploadContainer');
+        const btnTemplate = document.getElementById('btnTemplate');
+        const btnUpload = document.getElementById('btnUpload');
+
+        if (mode === 'template') {
+            uploadDiv.classList.remove('show');
+            btnTemplate.classList.add('active');
+            btnUpload.classList.remove('active');
+        } else {
+            uploadDiv.classList.add('show');
+            btnTemplate.classList.remove('active');
+            btnUpload.classList.add('active');
+        }
+    }
+
     const FIELDS = [
         { 
             id: 'loc', label: '提货地点', 
-            findText: '四川省',  // 简短关键词
-            newText: '四川省自贡市219井', 
+            findText: '四川省自贡市216井', newText: '四川省自贡市219井', 
             offX: -3, offY: -6, boxH: 20, widthEx: 6 
         },
         { 
             id: 'date', label: '提货时间', 
-            findText: '2025',   // 简短关键词
-            newText: '2025.12.18', 
+            findText: '2025.12.17', newText: '2025.12.17', 
             offX: -8, offY: -6, boxH: 20, widthEx: 30 
         },
         { 
             id: 'car', label: '承运车辆', 
-            findText: '川C52657', // 简短关键词
-            newText: '川C52657—川AEY29挂', 
+            findText: '川C52657', newText: '川C52657—川AEY29挂', 
             offX: -8, offY: -6, boxH: 20, widthEx: 20 
         },
         { 
             id: 'tel', label: '联系电话', 
-            findText: '153',    // 简短关键词
-            newText: '15328709269', 
+            findText: '15328709269', newText: '15328709269', 
             offX: -8, offY: -6, boxH: 20, widthEx: 35 
         }
     ];
@@ -107,11 +137,12 @@
     function initUI() {
         const container = document.getElementById('fieldsContainer');
         FIELDS.forEach(f => {
+            // 已删除 disabled 属性，允许修改查找文字
             container.innerHTML += `
                 <div class="field-row">
                     <div class="main-inputs">
                         <div class="col" style="flex:0.7;">
-                            <label>🔍 旧文字 (定位)</label>
+                            <label>🔍 查找文字</label>
                             <input type="text" class="input-find" id="find_${f.id}" value="${f.findText}">
                         </div>
                         <div class="col">
@@ -119,12 +150,11 @@
                             <input type="text" id="new_${f.id}" value="${f.newText}">
                         </div>
                     </div>
-                    <div class="tweak-row">
-                        <span style="font-size:12px; font-weight:bold; color:#007bff; margin-right:5px;">参数修正:</span>
+                    <div class="tweak-row"> 
                         <div class="tweak-item"><label>X偏移</label><input type="number" id="offX_${f.id}" value="${f.offX}"></div>
                         <div class="tweak-item"><label>Y偏移</label><input type="number" id="offY_${f.id}" value="${f.offY}"></div>
-                        <div class="tweak-item"><label>框高度</label><input type="number" id="boxH_${f.id}" value="${f.boxH}"></div>
-                        <div class="tweak-item"><label>增宽</label><input type="number" id="widthEx_${f.id}" value="${f.widthEx}"></div>
+                        <div class="tweak-item"><label>H高</label><input type="number" id="boxH_${f.id}" value="${f.boxH}"></div>
+                        <div class="tweak-item"><label>W+宽</label><input type="number" id="widthEx_${f.id}" value="${f.widthEx}"></div>
                     </div>
                 </div>
             `;
@@ -139,16 +169,13 @@
         const pdf = await loadingTask.promise;
         const page = await pdf.getPage(1);
         const textContent = await page.getTextContent();
-        
         let foundCoords = {};
-        console.log("扫描中...");
 
         for (let item of textContent.items) {
             const str = item.str.trim();
             if(!str) continue;
-
             targets.forEach(target => {
-                // 只要包含关键词就匹配 (例如包含"四川省"即可)
+                // 只要包含关键词就匹配
                 if (str.includes(target.text)) {
                     const x = item.transform[4];
                     const y = item.transform[5];
@@ -162,32 +189,38 @@
     }
 
     async function startProcess() {
-        const fileInput = document.getElementById('uploadPdf');
         const isDebug = document.getElementById('debugMode').checked;
         const btn = document.getElementById('runBtn');
-        
-        if (!fileInput.files[0]) { alert("请先上传PDF！"); return; }
-        
         btn.disabled = true;
-        log("⏳ 正在处理...");
+        let fileBytes = null;
 
         try {
-            const fileBytes = await fileInput.files[0].arrayBuffer();
+            if (currentMode === 'template') {
+                log("⏳ 正在下载默认模板...");
+                const pdfUrl = './template.pdf'; 
+                fileBytes = await fetch(pdfUrl).then(res => {
+                    if (!res.ok) throw new Error("未找到默认模板 (template.pdf)！请确认已上传到GitHub。");
+                    return res.arrayBuffer();
+                });
+            } else {
+                log("⏳ 读取上传文件...");
+                const fileInput = document.getElementById('uploadPdf');
+                if (!fileInput.files[0]) throw new Error("请先选择一个 PDF 文件！");
+                fileBytes = await fileInput.files[0].arrayBuffer();
+            }
 
-            // 1. 获取界面上的旧文字关键词
+            log("⏳ 正在扫描并处理...");
+            // 动态获取界面上输入的查找文字
             const searchList = FIELDS.map(f => ({
                 id: f.id,
                 text: document.getElementById(`find_${f.id}`).value.trim()
             }));
 
-            // 2. 扫描坐标
             const coords = await scanCoordinates(fileBytes, searchList);
             const foundKeys = Object.keys(coords);
-            if (foundKeys.length === 0) {
-                alert("⚠️ 未找到任何匹配文字！请检查PDF是否为纯图片，或尝试精简左侧搜索关键词。");
-            }
+            
+            if (foundKeys.length === 0) throw new Error("没找到任何匹配的旧文字。请检查‘查找文字’是否正确。");
 
-            // 3. 准备 PDF 修改
             const pdfDoc = await PDFDocument.load(fileBytes);
             pdfDoc.registerFontkit(window.fontkit);
             
@@ -196,11 +229,9 @@
             const customFont = await pdfDoc.embedFont(fontBytes);
             const page = pdfDoc.getPages()[0];
 
-            // 4. 执行绘制
             FIELDS.forEach(f => {
                 const found = coords[f.id];
                 const newVal = document.getElementById(`new_${f.id}`).value;
-                
                 const offX = parseFloat(document.getElementById(`offX_${f.id}`).value); 
                 const offY = parseFloat(document.getElementById(`offY_${f.id}`).value); 
                 const boxH = parseFloat(document.getElementById(`boxH_${f.id}`).value); 
@@ -212,30 +243,15 @@
                     const finalW = found.w + widthEx;
                     const finalH = boxH;
 
-                    // 画框
                     if (isDebug) {
-                        page.drawRectangle({
-                            x: finalX, y: finalY, width: finalW, height: finalH,
-                            borderColor: rgb(1, 0, 0), borderWidth: 1,
-                        });
+                        page.drawRectangle({ x: finalX, y: finalY, width: finalW, height: finalH, borderColor: rgb(1, 0, 0), borderWidth: 1 });
                     } else {
-                        page.drawRectangle({
-                            x: finalX, y: finalY, width: finalW, height: finalH,
-                            color: rgb(1, 1, 1),
-                        });
+                        page.drawRectangle({ x: finalX, y: finalY, width: finalW, height: finalH, color: rgb(1, 1, 1) });
                     }
 
-                    // 写字 (垂直居中)
                     const fontSize = 11;
                     const textYOffset = (finalH - fontSize) / 2 + 1.5;
-
-                    page.drawText(newVal, {
-                        x: finalX + 4, 
-                        y: finalY + textYOffset,
-                        size: fontSize,
-                        font: customFont,
-                        color: isDebug ? rgb(1, 0, 0) : rgb(0, 0, 0),
-                    });
+                    page.drawText(newVal, { x: finalX + 4, y: finalY + textYOffset, size: fontSize, font: customFont, color: isDebug ? rgb(1, 0, 0) : rgb(0, 0, 0) });
                 }
             });
 
@@ -243,9 +259,9 @@
             const blob = new Blob([pdfData], { type: 'application/pdf' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = isDebug ? `红框调试_${Date.now()}.pdf` : `提货单_修改完成.pdf`;
+            link.download = isDebug ? `红框调试_${Date.now()}.pdf` : `提货单_${new Date().toLocaleDateString().replace(/\//g,'-')}.pdf`;
             link.click();
-            log("✅ 成功！文件已自动下载。");
+            log("✅ 成功！");
 
         } catch (err) {
             console.error(err);
