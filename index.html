@@ -224,7 +224,7 @@
             const pdfDoc = await PDFDocument.load(fileBytes);
             pdfDoc.registerFontkit(window.fontkit);
             
-            const fontUrl = 'https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-sc@5.0.0/files/noto-sans-sc-chinese-simplified-400-normal.woff';
+            const fontUrl = './font.woff';
             const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
             const customFont = await pdfDoc.embedFont(fontBytes);
             const page = pdfDoc.getPages()[0];
@@ -273,3 +273,4 @@
 </script>
 </body>
 </html>
+
