@@ -129,7 +129,7 @@
         },
         { 
             id: 'tel', label: '联系电话', 
-            findText: '15328709269', newText: '15328709269', 
+            findText: '153', newText: '15328709269', 
             offX: -8, offY: -6, boxH: 20, widthEx: 35 
         }
     ];
@@ -224,7 +224,7 @@
             const pdfDoc = await PDFDocument.load(fileBytes);
             pdfDoc.registerFontkit(window.fontkit);
             
-            const fontUrl = './font.ttf';
+            const fontUrl = './simsun.ttf';
             const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
             const customFont = await pdfDoc.embedFont(fontBytes);
             const page = pdfDoc.getPages()[0];
