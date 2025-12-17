@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>提货单修改器 (最终完美版)</title>
+    <title>提货单修改器 (完美缓存版)</title>
     
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://unpkg.com/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
     </script>
@@ -17,7 +18,6 @@
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
         h2 { margin-top: 0; color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px; display: inline-block; }
         
-        /* 你的专属提示框样式 */
         .tip-box { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 12px; margin-bottom: 20px; color: #2e7d32; font-size: 13px; line-height: 1.6; }
         
         .mode-switch { display: flex; background: #e9ecef; border-radius: 8px; padding: 4px; margin-bottom: 20px; }
@@ -31,7 +31,6 @@
         .main-inputs { display: flex; gap: 10px; margin-bottom: 8px; }
         .col { flex: 1; }
         
-        /* 微调行：默认可见，方便修改 */
         .tweak-row { display: flex; gap: 5px; align-items: center; border-top: 1px dashed #ddd; padding-top: 8px; flex-wrap: wrap; }
         .tweak-item { display: flex; align-items: center; font-size: 11px; color: #666; background: #fff; padding: 2px 4px; border-radius: 4px; border: 1px solid #ddd;}
         .tweak-item label { margin-right: 2px; font-weight: normal; margin-bottom: 0; white-space: nowrap; }
@@ -40,14 +39,19 @@
         label { display: block; font-weight: bold; font-size: 13px; color: #333; margin-bottom: 4px; }
         input[type="text"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; box-sizing: border-box; }
         
-        /* 查找框高亮 */
         .input-find { background-color: #fffde7; border-color: #fbc02d; }
         
         button { width: 100%; padding: 14px; background: #007bff; color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; }
         button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
         
         .debug-mode { background: #fff3cd; padding: 10px; border: 1px solid #ffeeba; border-radius: 4px; margin-bottom: 15px; font-size: 14px; display: flex; align-items: center; }
         .status { margin-top: 15px; padding: 10px; border-radius: 6px; font-size: 13px; min-height: 20px; font-family: monospace; white-space: pre-wrap; background: #eee; }
+
+        /* 新增：资源加载进度条 */
+        .resource-status { font-size: 12px; margin-bottom: 15px; padding: 8px; background: #f0faff; border: 1px solid #cceeff; border-radius: 4px; color: #006699; }
+        .progress-bar { height: 4px; background: #ddd; margin-top: 5px; border-radius: 2px; overflow: hidden; display: none; }
+        .progress-fill { height: 100%; background: #007bff; width: 0%; transition: width 0.3s; }
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
@@ -55,14 +59,24 @@
 <body>
 
 <div class="card">
-    <h2>🚀 提货单修改器 (双模式)</h2>
-    
+    <h2>🚀 提货单修改器 (缓存增强版)</h2>
+
+    <div id="resStatus" class="resource-status">
+        <span id="resText">正在检查本地资源...</span>
+        <div id="resProgress" class="progress-bar"><div id="pFill" class="progress-fill"></div></div>
+    </div>
     <div class="tip-box">
         1. <b>参数基本已调整好。</b> x偏移代表左右，y偏移代表上下，框高度代表文字高度，宽度扩展代表框在文字后扩展多少<br>
         2. 原理其实就是，先根据关键词搜索到文字，然后根据偏移量调整位置，使用一个白框覆盖，最后替换文字。<br>
         3. 可以使用模糊搜索，例如，搜索“四川省”，可以直接写四进行搜索，但是注意不要重复。<br>
         4. 默认模板是你发我的pdf版本，如果上传新文件，可能需要微调参数。<br>
         5. <b>使用技巧：</b> 查找文字越短越好（如搜“2025”而不是“2025.12.17”），识别率更高。<br>
+    </div>
+    
+    <div class="tip-box">
+        1. <b>本地缓存已开启：</b> 字体和模板下载一次后会永久保存在手机/电脑中，下次打开无需流量，秒开。<br>
+        2. 参数和功能与原版完全一致，支持微调和上传。<br>
+        3. 如果是第一次运行，<b>请等待上方资源加载完毕</b>再点击生成。
     </div>
     
     <div class="mode-switch">
@@ -81,18 +95,95 @@
             <input type="checkbox" id="debugMode"> 
             <span style="margin-left:8px; color:#856404; font-weight:bold;">开启红色框调试</span>
         </label>
-        <span style="margin-left:15px; font-size:12px; color:#666;">检查位置偏移</span>
     </div>
 
     <div id="fieldsContainer"></div>
 
-    <button id="runBtn" onclick="startProcess()">🚀 开始生成</button>
-    <div id="statusBox" class="status">准备就绪。</div>
+    <button id="runBtn" onclick="startProcess()" disabled>正在准备资源...</button>
+    <div id="statusBox" class="status">等待就绪...</div>
 </div>
 
 <script>
     const { PDFDocument, rgb } = PDFLib;
     let currentMode = 'template'; 
+    
+    // 全局资源对象
+    const CACHE = { font: null, templatePdf: null };
+
+    // 初始化系统：检查缓存，没有则下载
+    async function initSystem() {
+        const btn = document.getElementById('runBtn');
+        const statusText = document.getElementById('resText');
+        const pBar = document.getElementById('resProgress');
+        const pFill = document.getElementById('pFill');
+
+        try {
+            // 1. 检查字体 (SimSun.ttf)
+            let fontBlob = await localforage.getItem('simsun_font');
+            if (fontBlob) {
+                statusText.innerText = "✅ 字体已从本地缓存加载";
+                CACHE.font = fontBlob;
+            } else {
+                statusText.innerText = "⏳ 正在下载字体 (15MB)... 请勿关闭";
+                pBar.style.display = 'block';
+                CACHE.font = await downloadWithProgress('./simsun.ttf', pFill);
+                await localforage.setItem('simsun_font', CACHE.font);
+                statusText.innerText = "✅ 字体下载完成并已缓存";
+            }
+
+            // 2. 检查默认模板 (template.pdf)
+            let pdfBlob = await localforage.getItem('template_pdf');
+            if (pdfBlob) {
+                CACHE.templatePdf = pdfBlob;
+            } else {
+                CACHE.templatePdf = await fetch('./template.pdf').then(res => res.arrayBuffer());
+                await localforage.setItem('template_pdf', CACHE.templatePdf);
+            }
+
+            // 全部就绪
+            statusText.innerText = "✅ 所有资源就绪 (离线可用)";
+            statusText.style.color = "green";
+            pBar.style.display = 'none';
+            btn.disabled = false;
+            btn.innerText = "🚀 开始生成";
+            log("系统准备就绪。");
+
+        } catch (e) {
+            console.error(e);
+            statusText.innerText = "❌ 资源加载失败: " + e.message;
+            statusText.style.color = "red";
+        }
+    }
+
+    // 下载并显示进度
+    async function downloadWithProgress(url, progressBarElem) {
+        const response = await fetch(url);
+        const reader = response.body.getReader();
+        const contentLength = +response.headers.get('Content-Length');
+        let receivedLength = 0;
+        let chunks = [];
+
+        while(true) {
+            const {done, value} = await reader.read();
+            if (done) break;
+            chunks.push(value);
+            receivedLength += value.length;
+            if (contentLength && progressBarElem) {
+                let percent = (receivedLength / contentLength) * 100;
+                progressBarElem.style.width = percent + "%";
+            }
+        }
+        let allChunks = new Uint8Array(receivedLength);
+        let position = 0;
+        for(let chunk of chunks) {
+            allChunks.set(chunk, position);
+            position += chunk.length;
+        }
+        return allChunks.buffer;
+    }
+
+    // 页面加载后立即执行初始化
+    window.addEventListener('load', initSystem);
 
     function switchMode(mode) {
         currentMode = mode;
@@ -137,7 +228,6 @@
     function initUI() {
         const container = document.getElementById('fieldsContainer');
         FIELDS.forEach(f => {
-            // 已删除 disabled 属性，允许修改查找文字
             container.innerHTML += `
                 <div class="field-row">
                     <div class="main-inputs">
@@ -165,7 +255,8 @@
     function log(msg) { document.getElementById('statusBox').innerText = msg; }
 
     async function scanCoordinates(pdfBuffer, targets) {
-        const loadingTask = pdfjsLib.getDocument({ data: pdfBuffer });
+        // 复制 buffer 避免 pdfjs 消耗掉原始数据
+        const loadingTask = pdfjsLib.getDocument({ data: pdfBuffer.slice(0) });
         const pdf = await loadingTask.promise;
         const page = await pdf.getPage(1);
         const textContent = await page.getTextContent();
@@ -175,7 +266,6 @@
             const str = item.str.trim();
             if(!str) continue;
             targets.forEach(target => {
-                // 只要包含关键词就匹配
                 if (str.includes(target.text)) {
                     const x = item.transform[4];
                     const y = item.transform[5];
@@ -195,13 +285,13 @@
         let fileBytes = null;
 
         try {
+            if (!CACHE.font) throw new Error("字体尚未加载完成，请稍候...");
+
+            // 1. 获取 PDF 数据
             if (currentMode === 'template') {
-                log("⏳ 正在下载默认模板...");
-                const pdfUrl = './template.pdf'; 
-                fileBytes = await fetch(pdfUrl).then(res => {
-                    if (!res.ok) throw new Error("未找到默认模板 (template.pdf)！请确认已上传到GitHub。");
-                    return res.arrayBuffer();
-                });
+                if (!CACHE.templatePdf) throw new Error("默认模板尚未加载完成...");
+                log("⏳ 使用缓存的默认模板...");
+                fileBytes = CACHE.templatePdf.slice(0); // 复制一份，防止污染缓存
             } else {
                 log("⏳ 读取上传文件...");
                 const fileInput = document.getElementById('uploadPdf');
@@ -210,7 +300,6 @@
             }
 
             log("⏳ 正在扫描并处理...");
-            // 动态获取界面上输入的查找文字
             const searchList = FIELDS.map(f => ({
                 id: f.id,
                 text: document.getElementById(`find_${f.id}`).value.trim()
@@ -221,12 +310,13 @@
             
             if (foundKeys.length === 0) throw new Error("没找到任何匹配的旧文字。请检查‘查找文字’是否正确。");
 
+            // 2. 加载 PDF
             const pdfDoc = await PDFDocument.load(fileBytes);
             pdfDoc.registerFontkit(window.fontkit);
             
-            const fontUrl = './simsun.ttf';
-            const fontBytes = await fetch(fontUrl).then(res => res.arrayBuffer());
-            const customFont = await pdfDoc.embedFont(fontBytes);
+            // 3. 使用缓存的字体 (关键修改点)
+            // 注意：fontkit 需要 ArrayBuffer 的副本
+            const customFont = await pdfDoc.embedFont(CACHE.font.slice(0));
             const page = pdfDoc.getPages()[0];
 
             FIELDS.forEach(f => {
@@ -273,5 +363,3 @@
 </script>
 </body>
 </html>
-
-
