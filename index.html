@@ -111,6 +111,7 @@
     const CACHE = { font: null, templatePdf: null };
 
     // 初始化系统：检查缓存，没有则下载
+    // 初始化系统：检查缓存，没有则下载
     async function initSystem() {
         const btn = document.getElementById('runBtn');
         const statusText = document.getElementById('resText');
@@ -118,7 +119,7 @@
         const pFill = document.getElementById('pFill');
 
         try {
-            // 1. 检查字体 (SimSun.ttf)
+            // 1. 检查字体 (SimSun.ttf) - 字体通常不变，key可以不改
             let fontBlob = await localforage.getItem('simsun_font');
             if (fontBlob) {
                 statusText.innerText = "✅ 字体已从本地缓存加载";
@@ -131,14 +132,22 @@
                 statusText.innerText = "✅ 字体下载完成并已缓存";
             }
 
-            // 2. 检查默认模板 (template.pdf)
-            let pdfBlob = await localforage.getItem('template_pdf');
+            // ============ 修改重点开始 ============
+            // 2. 检查默认模板 (改为 v2 版本以区分旧版)
+            // 修改 Key 为 'template_pdf_v2'，强制浏览器不读取旧缓存
+            let pdfBlob = await localforage.getItem('template_pdf_v2'); 
+            
             if (pdfBlob) {
+                statusText.innerText = "✅ 新模板(V2)已从本地缓存加载"; // 提示语也可以改一下
                 CACHE.templatePdf = pdfBlob;
             } else {
-                CACHE.templatePdf = await fetch('./template.pdf').then(res => res.arrayBuffer());
-                await localforage.setItem('template_pdf', CACHE.templatePdf);
+                statusText.innerText = "⏳ 正在下载新模板 (template2.pdf)...";
+                // 修改文件名为 template2.pdf
+                CACHE.templatePdf = await fetch('./template2.pdf').then(res => res.arrayBuffer());
+                // 保存到新的 Key 中
+                await localforage.setItem('template_pdf_v2', CACHE.templatePdf);
             }
+            // ============ 修改重点结束 ============
 
             // 全部就绪
             statusText.innerText = "✅ 所有资源就绪 (离线可用)";
